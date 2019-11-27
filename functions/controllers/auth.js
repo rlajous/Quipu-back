@@ -65,9 +65,9 @@ exports.login = async (req, res, next) => {
 };
 
 exports.getUser = async (req, res, next) => {
-  await db.collection('users').doc(req.userId).get()
+  await admin.firestore().collection('users').doc(req.userId).get()
     .then((doc) => {
-        return res.status(200).json({ data: doc.data() });
+        return res.status(200).json(doc.data());
       })
     .catch((error) => {
       console.log("Error getting documents: ", error);
