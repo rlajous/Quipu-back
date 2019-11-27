@@ -39,6 +39,8 @@ router.post('/login', authController.login);
 
 router.get('/user', isAuth, authController.getUser);
 
+router.get('/transactions', isAuth, authController.getTransactions);
+
 router.post('/editUser', isAuth, authController.editUser);
 
 module.exports = router;

@@ -29,7 +29,6 @@ exports.signup = (req, res, next) => {
         return admin.firestore().collection('users').doc(uid).set({
           name: name,
           email,
-          password,
           tokens: 100
         });
       });
@@ -67,7 +66,9 @@ exports.login = async (req, res, next) => {
 exports.getUser = async (req, res, next) => {
   await admin.firestore().collection('users').doc(req.userId).get()
     .then((doc) => {
-        return res.status(200).json(doc.data());
+        const data = doc.data();
+        data.uid = req.userId;
+        return res.status(200).json(data);
       })
     .catch((error) => {
       console.log("Error getting documents: ", error);
@@ -78,3 +79,26 @@ exports.editUser = (req, res, next) => {
   db.collection("cities").doc(req.userId).update(req.data);
 };
 
+exports.getTransactions = async (req, res, next) => {
+  const transactions = [];
+  await admin.firestore().collection('trasactions').where("buyerId", "==", req.userId).get()
+    .then((querySnapshot) => {
+      querySnapshot.forEach((doc) => {
+        transactions.push(doc.data());
+      });
+      return;
+    })
+    .catch((error) => {
+      console.log("Error getting documents: ", error);
+    });
+  await admin.firestore().collection('trasactions').where("sellerId", "==", req.userId).get()
+    .then((querySnapshot) => {
+      return querySnapshot.forEach((doc) => {
+        transactions.push(doc.data());
+      });
+      })
+    .catch((error) => {
+      console.log("Error getting documents: ", error);
+    });
+  res.status(200).json({transactions});
+};
