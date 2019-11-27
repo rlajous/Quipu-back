@@ -43,4 +43,12 @@ router.get('/transactions', isAuth, authController.getTransactions);
 
 router.post('/editUser', isAuth, authController.editUser);
 
+router.post('/sellTokens', isAuth, authController.sellTokens);
+
+router.post('/buyTokens', isAuth, authController.buyTokens);
+
+router.get('/sellers', isAuth, authController.sellers);
+
+router.get('/buyers', isAuth, authController.buyers);
+
 module.exports = router;

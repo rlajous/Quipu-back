@@ -102,3 +102,82 @@ exports.getTransactions = async (req, res, next) => {
     });
   res.status(200).json({transactions});
 };
+
+exports.sellTokens = async (req, res, next) => {
+  const { tokens, price } = req.body;
+  await admin.firestore().collection('SellOrders').add({
+      userId: req.userId,
+      tokens: parseFloat(tokens),
+      price: parseFloat(price)
+    })
+    .then(() => {
+      return res.status(200).json({ message: 'Order created!'});
+    })
+    .catch((error) => {
+      console.log("Error getting documents: ", error);
+    });
+};
+
+exports.buyTokens = async (req, res, next) => {
+  const { tokens, price } = req.body;
+  console.log({ tokens, price });
+  await admin.firestore().collection('BuyOrders').add({
+      userId: req.userId,
+      tokens: parseFloat(tokens),
+      price: parseFloat(price)
+    })
+    .then(() => {
+      return res.status(200).json({ message: 'Order created!'});
+    })
+    .catch((error) => {
+      console.log("Error getting documents: ", error);
+    });
+};
+
+exports.buyers = async (req, res, next) => {
+  const transactions = [];
+  await admin.firestore().collection('trasactions').where("buyerId", "==", req.userId).get()
+    .then((querySnapshot) => {
+      querySnapshot.forEach((doc) => {
+        transactions.push(doc.data());
+      });
+      return;
+    })
+    .catch((error) => {
+      console.log("Error getting documents: ", error);
+    });
+  await admin.firestore().collection('trasactions').where("sellerId", "==", req.userId).get()
+    .then((querySnapshot) => {
+      return querySnapshot.forEach((doc) => {
+        transactions.push(doc.data());
+      });
+      })
+    .catch((error) => {
+      console.log("Error getting documents: ", error);
+    });
+  res.status(200).json({transactions});
+};
+
+exports.sellers = async (req, res, next) => {
+  const transactions = [];
+  await admin.firestore().collection('trasactions').where("buyerId", "==", req.userId).get()
+    .then((querySnapshot) => {
+      querySnapshot.forEach((doc) => {
+        transactions.push(doc.data());
+      });
+      return;
+    })
+    .catch((error) => {
+      console.log("Error getting documents: ", error);
+    });
+  await admin.firestore().collection('trasactions').where("sellerId", "==", req.userId).get()
+    .then((querySnapshot) => {
+      return querySnapshot.forEach((doc) => {
+        transactions.push(doc.data());
+      });
+      })
+    .catch((error) => {
+      console.log("Error getting documents: ", error);
+    });
+  res.status(200).json({transactions});
+};
