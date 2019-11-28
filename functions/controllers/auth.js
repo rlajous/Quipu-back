@@ -151,21 +151,35 @@ exports.buyers = async (req, res, next) => {
   const page = parseInt(rawPage);
   const amount = parseInt(rawAmount);
   const buyers = [];
+  let pages = 0;
+
   await admin.firestore().collection('BuyOrders')
   .orderBy("price")
-  .startAfter(page * amount)
+  .startAt(page * amount)
   .limit(amount)
   .get()
-    .then((querySnapshot) => {
-      querySnapshot.forEach((doc) => {
-        buyers.push(doc.data());
-      });
-      return;
-    })
-    .catch((error) => {
-      console.log("Error getting documents: ", error);
+  .then((querySnapshot) => {
+    querySnapshot.forEach((doc) => {
+      buyers.push(doc.data());
     });
-  res.status(200).json({buyers});
+    return;
+  })
+  .catch((error) => {
+    console.log("Error getting documents: ", error);
+  });
+
+  await admin.firestore()
+  .collection('Properties')
+  .doc('BuyOrders')
+  .get()
+  .then((querySnapshot) => {
+    pages = Math.trunc(querySnapshot.data().numberOfDocs / amount);
+    return;
+  })
+  .catch((error) => {
+    console.log("Error getting documents: ", error);
+  });
+  res.status(200).json({ pages, buyers });
 };
 
 exports.sellers = async (req, res, next) => {
@@ -173,19 +187,32 @@ exports.sellers = async (req, res, next) => {
   const page = parseInt(rawPage);
   const amount = parseInt(rawAmount);
   const sellers = [];
+  let pages = 0;
+
   await admin.firestore().collection('SellOrders')
   .orderBy("price")
-  .startAfter(page * amount)
+  .startAt(page * amount)
   .limit(amount)
   .get()
-    .then((querySnapshot) => {
-      querySnapshot.forEach((doc) => {
-        sellers.push(doc.data());
-      });
-      return;
-    })
-    .catch((error) => {
-      console.log("Error getting documents: ", error);
+  .then((querySnapshot) => {
+    querySnapshot.forEach((doc) => {
+      sellers.push(doc.data());
     });
-  res.status(200).json({sellers});
+    return;
+  })
+  .catch((error) => {
+    console.log("Error getting documents: ", error);
+  });
+  await admin.firestore()
+  .collection('Properties')
+  .doc('BuyOrders')
+  .get()
+  .then((querySnapshot) => {
+    pages = Math.trunc(querySnapshot.data().numberOfDocs / amount);
+    return;
+  })
+  .catch((error) => {
+    console.log("Error getting documents: ", error);
+  });
+  res.status(200).json({ pages, sellers });
 };

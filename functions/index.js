@@ -5,6 +5,8 @@ const cors = require('cors');
 const app = express();
 const bodyParser = require('body-parser');
 
+FieldValue = require('firebase-admin').firestore.FieldValue;
+
 var serviceAccount = require("./permissions.json");
 
 admin.initializeApp({
@@ -36,6 +38,49 @@ app.use((error, req, res, next) => {
   const message = error.message;
   const data = error.data;
   res.status(status).json({ message: message, data: data });
+});
+
+exports.BuyOrdersWriteListener = 
+  functions.firestore.document('BuyOrders/{documentUid}')
+  .onWrite((change, context) => {
+
+  if (!change.before.exists) {
+      // New document Created : add one to count
+
+      db.doc('Properties/BuyOrders').update({ numberOfDocs: FieldValue.increment(1) });
+
+  } else if (change.before.exists && change.after.exists) {
+      // Updating existing document : Do nothing
+
+  } else if (!change.after.exists) {
+      // Deleting document : subtract one from count
+
+      db.doc('Properties/BuyOrders').update({ numberOfDocs: FieldValue.increment(-1) });
+
+  }
+});
+
+exports.SellOrdersWriteListener = 
+  functions.firestore.document('SellOrders/{documentUid}')
+  .onWrite((change, context) => {
+
+  if (!change.before.exists) {
+      // New document Created : add one to count
+
+      db.doc('Properties/SellOrders').update({ numberOfDocs: FieldValue.increment(1) });
+
+  } else if (change.before.exists && change.after.exists) {
+      // Updating existing document : Do nothing
+
+  } else if (!change.after.exists) {
+      // Deleting document : subtract one from count
+
+      db.doc('Properties/SellOrders').update({ numberOfDocs: FieldValue.increment(-1) });
+
+  }
+
+
+return;
 });
 
 exports.app = functions.https.onRequest(app);
