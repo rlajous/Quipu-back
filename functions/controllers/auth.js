@@ -26,7 +26,7 @@ exports.signup = (req, res, next) => {
       }
       ).then(resp => {
         uid = resp.uid;
-        return admin.firestore().collection('users').doc(uid).set({
+        return admin.firestore().collection('Users').doc(uid).set({
           name: name,
           email,
           tokens: 100
@@ -64,7 +64,7 @@ exports.login = async (req, res, next) => {
 };
 
 exports.getUser = async (req, res, next) => {
-  await admin.firestore().collection('users').doc(req.userId).get()
+  await admin.firestore().collection('Users').doc(req.userId).get()
     .then((doc) => {
         const data = doc.data();
         data.uid = req.userId;
@@ -75,13 +75,25 @@ exports.getUser = async (req, res, next) => {
     });
 };
 
-exports.editUser = (req, res, next) => {
-  db.collection("cities").doc(req.userId).update(req.data);
+exports.editUser = async (req, res, next) => {
+  const email = req.body.email;
+  await admin.firestore().collection('Users').doc(req.userId)
+    .update({ 
+      email
+    })
+    .then((doc) => {
+      const data = doc.data();
+      data.uid = req.userId;
+      return res.status(200).json({ data, message: 'User Updated!'});
+    })
+  .catch((error) => {
+    console.log("Error getting documents: ", error);
+  });
 };
 
 exports.getTransactions = async (req, res, next) => {
   const transactions = [];
-  await admin.firestore().collection('trasactions').where("buyerId", "==", req.userId).get()
+  await admin.firestore().collection('Transactions').where("buyerId", "==", req.userId).get()
     .then((querySnapshot) => {
       querySnapshot.forEach((doc) => {
         transactions.push(doc.data());
@@ -91,7 +103,7 @@ exports.getTransactions = async (req, res, next) => {
     .catch((error) => {
       console.log("Error getting documents: ", error);
     });
-  await admin.firestore().collection('trasactions').where("sellerId", "==", req.userId).get()
+  await admin.firestore().collection('Transactions').where("sellerId", "==", req.userId).get()
     .then((querySnapshot) => {
       return querySnapshot.forEach((doc) => {
         transactions.push(doc.data());
@@ -135,49 +147,45 @@ exports.buyTokens = async (req, res, next) => {
 };
 
 exports.buyers = async (req, res, next) => {
-  const transactions = [];
-  await admin.firestore().collection('trasactions').where("buyerId", "==", req.userId).get()
+  const { page:rawPage, amount:rawAmount } = req.query;
+  const page = parseInt(rawPage);
+  const amount = parseInt(rawAmount);
+  const buyers = [];
+  await admin.firestore().collection('BuyOrders')
+  .orderBy("price")
+  .startAfter(page * amount)
+  .limit(amount)
+  .get()
     .then((querySnapshot) => {
       querySnapshot.forEach((doc) => {
-        transactions.push(doc.data());
+        buyers.push(doc.data());
       });
       return;
     })
     .catch((error) => {
       console.log("Error getting documents: ", error);
     });
-  await admin.firestore().collection('trasactions').where("sellerId", "==", req.userId).get()
-    .then((querySnapshot) => {
-      return querySnapshot.forEach((doc) => {
-        transactions.push(doc.data());
-      });
-      })
-    .catch((error) => {
-      console.log("Error getting documents: ", error);
-    });
-  res.status(200).json({transactions});
+  res.status(200).json({buyers});
 };
 
 exports.sellers = async (req, res, next) => {
-  const transactions = [];
-  await admin.firestore().collection('trasactions').where("buyerId", "==", req.userId).get()
+  const { page:rawPage, amount:rawAmount } = req.query;
+  const page = parseInt(rawPage);
+  const amount = parseInt(rawAmount);
+  const sellers = [];
+  await admin.firestore().collection('SellOrders')
+  .orderBy("price")
+  .startAfter(page * amount)
+  .limit(amount)
+  .get()
     .then((querySnapshot) => {
       querySnapshot.forEach((doc) => {
-        transactions.push(doc.data());
+        sellers.push(doc.data());
       });
       return;
     })
     .catch((error) => {
       console.log("Error getting documents: ", error);
     });
-  await admin.firestore().collection('trasactions').where("sellerId", "==", req.userId).get()
-    .then((querySnapshot) => {
-      return querySnapshot.forEach((doc) => {
-        transactions.push(doc.data());
-      });
-      })
-    .catch((error) => {
-      console.log("Error getting documents: ", error);
-    });
-  res.status(200).json({transactions});
+  res.status(200).json({sellers});
 };
