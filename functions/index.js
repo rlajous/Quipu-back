@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const app = express();
 const bodyParser = require('body-parser');
+const moment = require('moment');
 
 FieldValue = require('firebase-admin').firestore.FieldValue;
 
@@ -42,13 +43,48 @@ app.use((error, req, res, next) => {
 
 exports.BuyOrdersWriteListener = 
   functions.firestore.document('BuyOrders/{documentUid}')
-  .onWrite((change, context) => {
+  .onWrite(async (change, context) => {
 
   if (!change.before.exists) {
       // New document Created : add one to count
-
+      let lowestPrice = null;
+      const document = change.after.data();
+      let buyer = null;
       db.doc('Properties/BuyOrders').update({ numberOfDocs: FieldValue.increment(1) });
-
+      await db.collection('SellOrders')
+      .where("tokens", "==", document.tokens)
+      .where("price", "<=", document.price )
+      .orderBy("price")
+      .get()
+        .then((querySnapshot) => {
+          querySnapshot.forEach((doc) => {
+            if (!lowestPrice && doc.data().userId !== document.userId){
+              lowestPrice = doc.id
+              buyer = doc;
+            }
+          });
+          return;
+        })
+          .catch((error) => {
+            console.log("Error getting documents: ", error);
+          });
+    if (lowestPrice) {
+      await db.collection('Transactions').add({
+        sellerId: document.userId,
+        tokens: parseFloat(document.tokens),
+        price: parseFloat(buyer.data().price),
+        buyerId: buyer.data().userId,
+        date: moment("DD-MM-YYYY")
+      }).then(() => {
+        console.log('Tokens ', context.documentUid, '..', lowestPrice );
+        db.collection("BuyOrders").doc(context.documentUid).delete();
+        db.collection("SellOrders").doc(lowestPrice).delete()
+        return;
+      })
+      .catch((error) => {
+        console.log("Error getting documents: ", error);
+      });
+    }
   } else if (change.before.exists && change.after.exists) {
       // Updating existing document : Do nothing
 
@@ -56,19 +92,53 @@ exports.BuyOrdersWriteListener =
       // Deleting document : subtract one from count
 
       db.doc('Properties/BuyOrders').update({ numberOfDocs: FieldValue.increment(-1) });
-
   }
 });
 
 exports.SellOrdersWriteListener = 
   functions.firestore.document('SellOrders/{documentUid}')
-  .onWrite((change, context) => {
+  .onWrite(async (change, context) => {
 
   if (!change.before.exists) {
       // New document Created : add one to count
-
+      let lowestPrice = null;
+      const document = change.after.data();
+      let buyer = null;
       db.doc('Properties/SellOrders').update({ numberOfDocs: FieldValue.increment(1) });
-
+      await db.collection('BuyOrders')
+        .where("tokens", "==", document.tokens)
+        .where("price", ">=", document.price )
+        .orderBy("price",'desc')
+        .get()
+          .then((querySnapshot) => {
+            querySnapshot.forEach((doc) => {
+              if (!lowestPrice && doc.data().userId !== document.userId){
+                lowestPrice = doc.id
+                buyer = doc;
+              }
+            });
+            return;
+          })
+            .catch((error) => {
+              console.log("Error getting documents: ", error);
+            });
+      if (lowestPrice) {
+        await db.collection('Transactions').add({
+          sellerId: document.userId,
+          tokens: parseFloat(document.tokens),
+          price: parseFloat(buyer.data().price),
+          buyerId: buyer.data().userId,
+          date: moment("DD-MM-YYYY")
+        }).then(() => {
+          console.log('Tokens ', context.documentUid, '..', lowestPrice );
+          db.collection("SellOrders").doc(context.documentUid).delete();
+          db.collection("BuyOrders").doc(lowestPrice).delete()
+          return;
+        })
+        .catch((error) => {
+          console.log("Error getting documents: ", error);
+        });
+      }
   } else if (change.before.exists && change.after.exists) {
       // Updating existing document : Do nothing
 
@@ -79,8 +149,7 @@ exports.SellOrdersWriteListener =
 
   }
 
-
-return;
+  return;
 });
 
 exports.app = functions.https.onRequest(app);

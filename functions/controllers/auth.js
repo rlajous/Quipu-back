@@ -173,7 +173,7 @@ exports.buyers = async (req, res, next) => {
   .doc('BuyOrders')
   .get()
   .then((querySnapshot) => {
-    pages = Math.trunc(querySnapshot.data().numberOfDocs / amount);
+    pages = Math.trunc(querySnapshot.data().numberOfDocs / amount)+1;
     return;
   })
   .catch((error) => {
@@ -208,7 +208,7 @@ exports.sellers = async (req, res, next) => {
   .doc('BuyOrders')
   .get()
   .then((querySnapshot) => {
-    pages = Math.trunc(querySnapshot.data().numberOfDocs / amount);
+    pages = Math.trunc(querySnapshot.data().numberOfDocs / amount)+1;
     return;
   })
   .catch((error) => {
