@@ -46,39 +46,40 @@ exports.BuyOrdersWriteListener =
   .onWrite(async (change, context) => {
 
   if (!change.before.exists) {
-      // New document Created : add one to count
-      let lowestPrice = null;
-      const document = change.after.data();
-      let buyer = null;
-      db.doc('Properties/BuyOrders').update({ numberOfDocs: FieldValue.increment(1) });
-      await db.collection('SellOrders')
-      .where("tokens", "==", document.tokens)
-      .where("price", "<=", document.price )
-      .orderBy("price")
-      .get()
-        .then((querySnapshot) => {
-          querySnapshot.forEach((doc) => {
-            if (!lowestPrice && doc.data().userId !== document.userId){
-              lowestPrice = doc.id
-              buyer = doc;
-            }
-          });
-          return;
-        })
-          .catch((error) => {
-            console.log("Error getting documents: ", error);
-          });
+    // New document Created : add one to count
+    let lowestPrice = null;
+    const document = change.after.data();
+    let buyer = null;
+    db.doc('Properties/BuyOrders').update({ numberOfDocs: FieldValue.increment(1) });
+    await db.collection('SellOrders')
+    .where("tokens", "==", parseFloat(document.tokens))
+    .where("price", "<=", parseFloat(document.price))
+    .orderBy("price")
+    .get()
+      .then((querySnapshot) => {
+        querySnapshot.forEach((doc) => {
+          if (!lowestPrice && doc.data().userId !== document.userId){
+            lowestPrice = doc.id;
+            buyer = doc;
+          }
+        });
+        return;
+      })
+        .catch((error) => {
+          console.log("Error getting documents: ", error);
+        });
+    console.log(lowestPrice);
     if (lowestPrice) {
       await db.collection('Transactions').add({
         sellerId: document.userId,
         tokens: parseFloat(document.tokens),
         price: parseFloat(buyer.data().price),
         buyerId: buyer.data().userId,
-        date: moment("DD-MM-YYYY")
-      }).then(() => {
-        console.log('Tokens ', context.documentUid, '..', lowestPrice );
-        db.collection("BuyOrders").doc(context.documentUid).delete();
-        db.collection("SellOrders").doc(lowestPrice).delete()
+        date: new Date()
+      }).then(async () => {
+        console.log('Tokens ', change.after.id, '..', lowestPrice );
+        await db.collection("BuyOrders").doc(change.after.id).delete();
+        await db.collection("SellOrders").doc(lowestPrice).delete()
         return;
       })
       .catch((error) => {
@@ -100,39 +101,39 @@ exports.SellOrdersWriteListener =
   .onWrite(async (change, context) => {
 
   if (!change.before.exists) {
-      // New document Created : add one to count
-      let lowestPrice = null;
-      const document = change.after.data();
-      let buyer = null;
-      db.doc('Properties/SellOrders').update({ numberOfDocs: FieldValue.increment(1) });
-      await db.collection('BuyOrders')
-        .where("tokens", "==", document.tokens)
-        .where("price", ">=", document.price )
-        .orderBy("price",'desc')
-        .get()
-          .then((querySnapshot) => {
-            querySnapshot.forEach((doc) => {
-              if (!lowestPrice && doc.data().userId !== document.userId){
-                lowestPrice = doc.id
-                buyer = doc;
-              }
-            });
-            return;
-          })
-            .catch((error) => {
-              console.log("Error getting documents: ", error);
-            });
+    // New document Created : add one to count
+    let lowestPrice = null;
+    const document = change.after.data();
+    let buyer = null;
+    db.doc('Properties/SellOrders').update({ numberOfDocs: FieldValue.increment(1) });
+    await db.collection('BuyOrders')
+      .where("tokens", "==", parseFloat(document.tokens))
+      .where("price", ">=", parseFloat(document.price))
+      .orderBy("price",'desc')
+      .get()
+        .then((querySnapshot) => {
+          querySnapshot.forEach((doc) => {
+            if (!lowestPrice && doc.data().userId !== document.userId){
+              lowestPrice = doc.id;
+              buyer = doc;
+            }
+          });
+          return;
+        })
+          .catch((error) => {
+            console.log("Error getting documents: ", error);
+        });
       if (lowestPrice) {
         await db.collection('Transactions').add({
           sellerId: document.userId,
           tokens: parseFloat(document.tokens),
           price: parseFloat(buyer.data().price),
           buyerId: buyer.data().userId,
-          date: moment("DD-MM-YYYY")
-        }).then(() => {
-          console.log('Tokens ', context.documentUid, '..', lowestPrice );
-          db.collection("SellOrders").doc(context.documentUid).delete();
-          db.collection("BuyOrders").doc(lowestPrice).delete()
+          date: new Date()
+        }).then(async () => {
+          console.log('Tokens ', change.after.id, '..', lowestPrice );
+          await db.collection("SellOrders").doc(change.after.id).delete();
+          await db.collection("BuyOrders").doc(lowestPrice).delete();
           return;
         })
         .catch((error) => {
