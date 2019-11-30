@@ -24,8 +24,9 @@ exports.signup = (req, res, next) => {
         password,
         tokens: 100
       }
-      ).then(resp => {
+      ).then(async resp => {
         uid = resp.uid;
+        await admin.firestore().collection('Properties').doc(uid).set({ transactions: 0 });
         return admin.firestore().collection('Users').doc(uid).set({
           name: name,
           email,
@@ -92,8 +93,17 @@ exports.editUser = async (req, res, next) => {
 };
 
 exports.getTransactions = async (req, res, next) => {
+  const { page:rawPage, amount:rawAmount } = req.query;
+  const page = parseInt(rawPage);
+  const amount = parseInt(rawAmount);
   const transactions = [];
-  await admin.firestore().collection('Transactions').where("buyerId", "==", req.userId).get()
+  let pages = 0;
+  await admin.firestore().collection('Transactions')
+  .where("buyerId", "==", req.userId)
+  .orderBy("date")
+  .startAt(page * amount)
+  .limit(amount)
+  .get()
     .then((querySnapshot) => {
       querySnapshot.forEach((doc) => {
         transactions.push(doc.data());
@@ -105,14 +115,25 @@ exports.getTransactions = async (req, res, next) => {
     });
   await admin.firestore().collection('Transactions').where("sellerId", "==", req.userId).get()
     .then((querySnapshot) => {
-      return querySnapshot.forEach((doc) => {
-        transactions.push(doc.data());
-      });
+        return querySnapshot.forEach((doc) => {
+          transactions.push(doc.data());
+        });
       })
     .catch((error) => {
       console.log("Error getting documents: ", error);
     });
-  res.status(200).json({transactions});
+  await admin.firestore()
+    .collection('Properties')
+    .doc(req.userId)
+    .get()
+    .then((querySnapshot) => {
+      pages = Math.trunc(querySnapshot.data().transactions / amount) + 1;
+      return;
+    })
+    .catch((error) => {
+      console.log("Error getting documents: ", error);
+    });
+  res.status(200).json({ pages, transactions });
 };
 
 exports.sellTokens = async (req, res, next) => {
@@ -120,7 +141,8 @@ exports.sellTokens = async (req, res, next) => {
   await admin.firestore().collection('SellOrders').add({
       userId: req.userId,
       tokens: parseFloat(tokens),
-      price: parseFloat(price)
+      price: parseFloat(price),
+      date: new Date()
     })
     .then(() => {
       return res.status(200).json({ message: 'Order created!'});
@@ -136,7 +158,8 @@ exports.buyTokens = async (req, res, next) => {
   await admin.firestore().collection('BuyOrders').add({
       userId: req.userId,
       tokens: parseFloat(tokens),
-      price: parseFloat(price)
+      price: parseFloat(price),
+      date: new Date()
     })
     .then(() => {
       return res.status(200).json({ message: 'Order created!'});

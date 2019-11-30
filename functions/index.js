@@ -1,10 +1,11 @@
+require('dotenv').config();
+
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const express = require('express');
 const cors = require('cors');
 const app = express();
 const bodyParser = require('body-parser');
-const moment = require('moment');
 
 FieldValue = require('firebase-admin').firestore.FieldValue;
 
@@ -12,11 +13,14 @@ var serviceAccount = require("./permissions.json");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  databaseURL: "https://fir-api-9a206..firebaseio.com"
+  databaseURL: process.env.DB_HOST
 });
+
 const authRoutes = require('./routes/auth');
 
 const db = admin.firestore();
+
+const transactions = require('./utils/orders');
 
 app.use(cors({ origin: true }));
 app.use(bodyParser.json());
@@ -47,52 +51,19 @@ exports.BuyOrdersWriteListener =
 
   if (!change.before.exists) {
     // New document Created : add one to count
-    let lowestPrice = null;
-    const document = change.after.data();
-    let buyer = null;
+
     db.doc('Properties/BuyOrders').update({ numberOfDocs: FieldValue.increment(1) });
-    await db.collection('SellOrders')
-    .where("tokens", "==", parseFloat(document.tokens))
-    .where("price", "<=", parseFloat(document.price))
-    .orderBy("price")
-    .get()
-      .then((querySnapshot) => {
-        querySnapshot.forEach((doc) => {
-          if (!lowestPrice && doc.data().userId !== document.userId){
-            lowestPrice = doc.id;
-            buyer = doc;
-          }
-        });
-        return;
-      })
-        .catch((error) => {
-          console.log("Error getting documents: ", error);
-        });
-    console.log(lowestPrice);
-    if (lowestPrice) {
-      await db.collection('Transactions').add({
-        sellerId: document.userId,
-        tokens: parseFloat(document.tokens),
-        price: parseFloat(buyer.data().price),
-        buyerId: buyer.data().userId,
-        date: new Date()
-      }).then(async () => {
-        console.log('Tokens ', change.after.id, '..', lowestPrice );
-        await db.collection("BuyOrders").doc(change.after.id).delete();
-        await db.collection("SellOrders").doc(lowestPrice).delete()
-        return;
-      })
-      .catch((error) => {
-        console.log("Error getting documents: ", error);
-      });
-    }
+    await transactions.buyOrderTransaction(change);
+
   } else if (change.before.exists && change.after.exists) {
-      // Updating existing document : Do nothing
+    // Updating existing document : Do nothing
+    await transactions.buyOrderTransaction(change);
 
   } else if (!change.after.exists) {
       // Deleting document : subtract one from count
 
       db.doc('Properties/BuyOrders').update({ numberOfDocs: FieldValue.increment(-1) });
+      
   }
 });
 
@@ -102,55 +73,36 @@ exports.SellOrdersWriteListener =
 
   if (!change.before.exists) {
     // New document Created : add one to count
-    let lowestPrice = null;
-    const document = change.after.data();
-    let buyer = null;
+
     db.doc('Properties/SellOrders').update({ numberOfDocs: FieldValue.increment(1) });
-    await db.collection('BuyOrders')
-      .where("tokens", "==", parseFloat(document.tokens))
-      .where("price", ">=", parseFloat(document.price))
-      .orderBy("price",'desc')
-      .get()
-        .then((querySnapshot) => {
-          querySnapshot.forEach((doc) => {
-            if (!lowestPrice && doc.data().userId !== document.userId){
-              lowestPrice = doc.id;
-              buyer = doc;
-            }
-          });
-          return;
-        })
-          .catch((error) => {
-            console.log("Error getting documents: ", error);
-        });
-      if (lowestPrice) {
-        await db.collection('Transactions').add({
-          sellerId: document.userId,
-          tokens: parseFloat(document.tokens),
-          price: parseFloat(buyer.data().price),
-          buyerId: buyer.data().userId,
-          date: new Date()
-        }).then(async () => {
-          console.log('Tokens ', change.after.id, '..', lowestPrice );
-          await db.collection("SellOrders").doc(change.after.id).delete();
-          await db.collection("BuyOrders").doc(lowestPrice).delete();
-          return;
-        })
-        .catch((error) => {
-          console.log("Error getting documents: ", error);
-        });
-      }
+    await transactions.sellOrderTransaction(change);
+
   } else if (change.before.exists && change.after.exists) {
-      // Updating existing document : Do nothing
+    // Updating existing document : Do nothing
+    await transactions.sellOrderTransaction(change);
 
   } else if (!change.after.exists) {
-      // Deleting document : subtract one from count
-
-      db.doc('Properties/SellOrders').update({ numberOfDocs: FieldValue.increment(-1) });
+    // Deleting document : subtract one from count
+    db.doc('Properties/SellOrders').update({ numberOfDocs: FieldValue.increment(-1) });
 
   }
 
   return;
 });
+
+exports.TransactionsWriteListener = 
+  functions.firestore.document('Transactions/{documentUid}')
+    .onWrite(async (change, context) => {
+
+      if (!change.before.exists) {
+        // New document Created : add one to count
+        const buyerId = change.after.data().buyerId;
+        const sellerId = change.after.data().sellerId;
+        db.doc(`Properties/${buyerId}`).update({ transactions: FieldValue.increment(1) });
+        db.doc(`Properties/${sellerId}`).update({ transactions: FieldValue.increment(1) });
+      }
+      return;
+    }
+);
 
 exports.app = functions.https.onRequest(app);
