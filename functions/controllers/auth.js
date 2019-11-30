@@ -11,7 +11,6 @@ exports.signup = (req, res, next) => {
     throw error;
   }
   const email = req.body.email;
-  const name = req.body.name;
   const password = req.body.password;
   let uid;
   bcrypt
@@ -26,21 +25,20 @@ exports.signup = (req, res, next) => {
       }
       ).then(async resp => {
         uid = resp.uid;
-        await admin.firestore().collection('Properties').doc(uid).set({ transactions: 0 });
+        await admin.firestore().collection('Properties')
+          .doc(uid)
+          .set({
+            sellTransactions: 0,
+            buyTransactions: 0
+          });
         return admin.firestore().collection('Users').doc(uid).set({
-          name: name,
           email,
           tokens: 100
         });
       });
     })
-    .then(result => {
-      return res.status(201).json({ message: 'User created!', user: {
-        name,
-        id: uid,
-        email,
-        tokens: 100
-      }});
+    .then(() => {
+      return res.status(201).json({ message: 'User created!'});
     })
     .catch(err => {
       if (!err.statusCode) {
@@ -98,22 +96,56 @@ exports.getTransactions = async (req, res, next) => {
   const amount = parseInt(rawAmount);
   const transactions = [];
   let pages = 0;
-  await admin.firestore().collection('Transactions')
-  .where("buyerId", "==", req.userId)
-  .orderBy("date")
-  .startAt(page * amount)
-  .limit(amount)
+  let buyTransactions = 0;
+  let sellTransactions = 0; 
+  await admin.firestore()
+  .collection('Properties')
+  .doc(req.userId)
   .get()
-    .then((querySnapshot) => {
-      querySnapshot.forEach((doc) => {
-        transactions.push(doc.data());
+  .then((querySnapshot) => {
+    const { sellTransactions, buyTransactions } = querySnapshot.data();
+    const totalTransaction = sellTransactions + buyTransactions;
+    pages = Math.trunc(totalTransaction / amount) + 1;
+    return;
+  })
+  .catch((error) => {
+    console.log("Error getting documents: ", error);
+  });
+  const limit = Math.trunc(amount / 2);
+  let buyLimit = buyTransactions - (page * limit);
+  let sellLimit = sellTransactions - (page * limit) ;
+  let buyList = buyLimit > 0;
+  let sellList = sellLimit > 0;
+  if (buyLimit < limit) {
+    sellLimit += (buyLimit - limit)
+  }
+  if (sellLimit < limit) {
+    buyLimit += (sellLimit - limit)
+  }
+  if ( buyList ) {
+    await admin.firestore().collection('Transactions')
+    .where("buyerId", "==", req.userId)
+    .orderBy("date")
+    .startAt(page * limit)
+    .limit(buyLimit)
+    .get()
+      .then((querySnapshot) => {
+        querySnapshot.forEach((doc) => {
+          transactions.push(doc.data());
+        });
+        return;
+      })
+      .catch((error) => {
+        console.log("Error getting documents: ", error);
       });
-      return;
-    })
-    .catch((error) => {
-      console.log("Error getting documents: ", error);
-    });
-  await admin.firestore().collection('Transactions').where("sellerId", "==", req.userId).get()
+  }
+  if ( sellList ) {
+    await admin.firestore().collection('Transactions')
+    .where("sellerId", "==", req.userId)
+    .orderBy("date")
+    .startAt(page * limit)
+    .limit(sellLimit)
+    .get()
     .then((querySnapshot) => {
         return querySnapshot.forEach((doc) => {
           transactions.push(doc.data());
@@ -122,17 +154,8 @@ exports.getTransactions = async (req, res, next) => {
     .catch((error) => {
       console.log("Error getting documents: ", error);
     });
-  await admin.firestore()
-    .collection('Properties')
-    .doc(req.userId)
-    .get()
-    .then((querySnapshot) => {
-      pages = Math.trunc(querySnapshot.data().transactions / amount) + 1;
-      return;
-    })
-    .catch((error) => {
-      console.log("Error getting documents: ", error);
-    });
+  }
+
   res.status(200).json({ pages, transactions });
 };
 

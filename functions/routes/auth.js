@@ -26,11 +26,7 @@ router.put(
       .normalizeEmail(),
     body('password')
       .trim()
-      .isLength({ min: 5 }),
-    body('name')
-      .trim()
-      .not()
-      .isEmpty()
+      .isLength({ min: 5 })
   ],
   authController.signup
 );

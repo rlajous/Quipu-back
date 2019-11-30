@@ -98,8 +98,8 @@ exports.TransactionsWriteListener =
         // New document Created : add one to count
         const buyerId = change.after.data().buyerId;
         const sellerId = change.after.data().sellerId;
-        db.doc(`Properties/${buyerId}`).update({ transactions: FieldValue.increment(1) });
-        db.doc(`Properties/${sellerId}`).update({ transactions: FieldValue.increment(1) });
+        db.doc(`Properties/${buyerId}`).update({ buyTransactions: FieldValue.increment(1) });
+        db.doc(`Properties/${sellerId}`).update({ sellTransactions: FieldValue.increment(1) });
       }
       return;
     }
