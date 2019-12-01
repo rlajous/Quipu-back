@@ -28,7 +28,7 @@ exports.buyOrderTransaction = async change => {
         if (lowestPrice) {
             await db.collection('Users').doc(seller.data().userId).get()
             .then((doc) => {
-               if (doc.data().tokens >= document.tokens) {
+               if (doc.data().tokens >= parseFloat(document.tokens)) {
                 succes = true;
                }
                return;
@@ -44,8 +44,8 @@ exports.buyOrderTransaction = async change => {
                     buyerId: document.userId,
                     date: new Date()
                   }).then(async () => {
-                    await db.collection("Users").doc(document.userId).update({ tokens: FieldValue.increment(document.tokens) });
-                    await db.collection("Users").doc(seller.data().userId).update({ tokens: FieldValue.increment(-document.tokens) });
+                    await db.collection("Users").doc(document.userId).update({ tokens: FieldValue.increment(parseFloat(document.tokens)) });
+                    await db.collection("Users").doc(seller.data().userId).update({ tokens: FieldValue.increment(-parseFloat(document.tokens)) });
                     await db.collection("BuyOrders").doc(change.after.id).delete();
                     await db.collection("SellOrders").doc(lowestPrice).delete()
                     return;
@@ -85,7 +85,7 @@ exports.sellOrderTransaction = async change => {
         if (lowestPrice) {
             await db.collection('Users').doc(document.userId).get()
             .then((doc) => {
-               if (doc.data().tokens >= document.tokens) {
+               if (doc.data().tokens >= parseFloat(document.tokens)) {
                 succes = true;
                }
                return;
@@ -101,8 +101,8 @@ exports.sellOrderTransaction = async change => {
                     buyerId: buyer.data().userId,
                     date: new Date()
                 }).then(async () => {
-                    await db.collection("Users").doc(buyer.data().userId).update({ tokens: FieldValue.increment(document.tokens) });
-                    await db.collection("Users").doc(document.userId).update({ tokens: FieldValue.increment(-document.tokens) });
+                    await db.collection("Users").doc(buyer.data().userId).update({ tokens: FieldValue.increment(parseFloat(document.tokens)) });
+                    await db.collection("Users").doc(document.userId).update({ tokens: FieldValue.increment(-parseFloat(document.tokens)) });
                     await db.collection("SellOrders").doc(change.after.id).delete();
                     await db.collection("BuyOrders").doc(lowestPrice).delete();
                     return;

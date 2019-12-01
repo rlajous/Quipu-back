@@ -97,15 +97,18 @@ exports.getTransactions = async (req, res, next) => {
   const transactions = [];
   let pages = 0;
   let buyTransactions = 0;
-  let sellTransactions = 0; 
+  let sellTransactions = 0;
+  console.log({ page , amount})
   await admin.firestore()
   .collection('Properties')
   .doc(req.userId)
   .get()
   .then((querySnapshot) => {
-    const { sellTransactions, buyTransactions } = querySnapshot.data();
-    const totalTransaction = sellTransactions + buyTransactions;
-    pages = Math.trunc(totalTransaction / amount) + 1;
+    const { sellTransactions:rawSellTransactions, buyTransactions:rawBuyTransactions } = querySnapshot.data();
+    const totalTransaction = parseInt(rawSellTransactions) + parseInt(rawBuyTransactions);
+    buyTransactions = rawBuyTransactions;
+    sellTransactions = rawSellTransactions;
+    pages = Math.trunc(totalTransaction / amount);
     return;
   })
   .catch((error) => {
@@ -219,7 +222,7 @@ exports.buyers = async (req, res, next) => {
   .doc('BuyOrders')
   .get()
   .then((querySnapshot) => {
-    pages = Math.trunc(querySnapshot.data().numberOfDocs / amount)+1;
+    pages = Math.trunc(querySnapshot.data().numberOfDocs / amount);
     return;
   })
   .catch((error) => {
@@ -254,7 +257,7 @@ exports.sellers = async (req, res, next) => {
   .doc('BuyOrders')
   .get()
   .then((querySnapshot) => {
-    pages = Math.trunc(querySnapshot.data().numberOfDocs / amount)+1;
+    pages = Math.trunc(querySnapshot.data().numberOfDocs / amount);
     return;
   })
   .catch((error) => {
