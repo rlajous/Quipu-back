@@ -47,7 +47,7 @@ exports.buyOrderTransaction = async change => {
                     await db.collection("Users").doc(document.userId).update({ tokens: FieldValue.increment(parseFloat(document.tokens)) });
                     await db.collection("Users").doc(seller.data().userId).update({ tokens: FieldValue.increment(-parseFloat(document.tokens)) });
                     await db.collection("BuyOrders").doc(change.after.id).delete();
-                    await db.collection("SellOrders").doc(lowestPrice).delete()
+                    await db.collection("SellOrders").doc(lowestPrice).delete();
                     return;
                   })
                   .catch((error) => {

@@ -29,7 +29,9 @@ exports.signup = (req, res, next) => {
           .doc(uid)
           .set({
             sellTransactions: 0,
-            buyTransactions: 0
+            buyTransactions: 0,
+            buyOrders: 0,
+            sellOrders: 0
           });
         return admin.firestore().collection('Users').doc(uid).set({
           email,
@@ -98,7 +100,6 @@ exports.getTransactions = async (req, res, next) => {
   let pages = 0;
   let buyTransactions = 0;
   let sellTransactions = 0;
-  console.log({ page , amount})
   await admin.firestore()
   .collection('Properties')
   .doc(req.userId)
@@ -180,7 +181,6 @@ exports.sellTokens = async (req, res, next) => {
 
 exports.buyTokens = async (req, res, next) => {
   const { tokens, price } = req.body;
-  console.log({ tokens, price });
   await admin.firestore().collection('BuyOrders').add({
       userId: req.userId,
       tokens: parseFloat(tokens),
@@ -264,4 +264,73 @@ exports.sellers = async (req, res, next) => {
     console.log("Error getting documents: ", error);
   });
   res.status(200).json({ pages, sellers });
+};
+
+exports.purchases = async (req, res, next) => {
+  const { page:rawPage, amount:rawAmount } = req.query;
+  const page = parseInt(rawPage);
+  const amount = parseInt(rawAmount);
+  const purchases = [];
+  let pages = 0;
+
+  await admin.firestore().collection('BuyOrders')
+  .where("userId", "==", req.userId)
+  .orderBy("date")
+  .startAt(page * amount)
+  .limit(amount)
+  .get()
+  .then((querySnapshot) => {
+    querySnapshot.forEach((doc) => {
+      purchases.push(doc.data());
+    });
+    return;
+  })
+  .catch((error) => {
+    console.log("Error getting documents: ", error);
+  });
+
+  await admin.firestore()
+  .collection('Properties')
+  .doc(req.userId)
+  .get()
+  .then((querySnapshot) => {
+    const { buyOrders } = querySnapshot.data();
+    pages = Math.trunc(buyOrders / amount);
+    return;
+  });
+  res.status(200).json({ pages, purchases });
+};
+
+exports.sells = async (req, res, next) => {
+  const { page:rawPage, amount:rawAmount } = req.query;
+  const page = parseInt(rawPage);
+  const amount = parseInt(rawAmount);
+  const sells = [];
+  let pages = 0;
+
+  await admin.firestore().collection('SellOrders')
+  .where("userId", "==", req.userId)
+  .orderBy("date")
+  .startAt(page * amount)
+  .limit(amount)
+  .get()
+  .then((querySnapshot) => {
+    querySnapshot.forEach((doc) => {
+      sells.push(doc.data());
+    });
+    return;
+  })
+  .catch((error) => {
+    console.log("Error getting documents: ", error);
+  });
+  await admin.firestore()
+  .collection('Properties')
+  .doc(req.userId)
+  .get()
+  .then((querySnapshot) => {
+    const { sellOrders } = querySnapshot.data();
+    pages = Math.trunc(sellOrders / amount);
+    return;
+  });
+  res.status(200).json({ pages, sells });
 };

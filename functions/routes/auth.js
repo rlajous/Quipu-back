@@ -47,4 +47,8 @@ router.get('/sellers', isAuth, authController.sellers);
 
 router.get('/buyers', isAuth, authController.buyers);
 
+router.get('/purchases', isAuth, authController.purchases);
+
+router.get('/sells', isAuth, authController.sells);
+
 module.exports = router;

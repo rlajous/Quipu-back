@@ -47,61 +47,43 @@ app.use((error, req, res, next) => {
 
 exports.BuyOrdersWriteListener = 
   functions.firestore.document('BuyOrders/{documentUid}')
-  .onWrite(async (change, context) => {
-
-  if (!change.before.exists) {
-    // New document Created : add one to count
-
-    db.doc('Properties/BuyOrders').update({ numberOfDocs: FieldValue.increment(1) });
-    await transactions.buyOrderTransaction(change);
-
-  } else if (change.before.exists && change.after.exists) {
-    // Updating existing document : Do nothing
-    await transactions.buyOrderTransaction(change);
-
-  } else if (!change.after.exists) {
-      // Deleting document : subtract one from count
-
+    .onWrite(async (change, context) => {
+    if (!change.before.exists) {
+      db.doc('Properties/BuyOrders').update({ numberOfDocs: FieldValue.increment(1) });
+      db.collection('Properties').doc(change.after.data().userId).update({ buyOrders: FieldValue.increment(1) });
+      await transactions.buyOrderTransaction(change);
+    } else if (change.before.exists && change.after.exists) {
+      await transactions.buyOrderTransaction(change);
+    } else if (!change.after.exists) {
+      db.collection('Properties').doc(change.after.data().userId).update({ buyOrders: FieldValue.increment(1) });
       db.doc('Properties/BuyOrders').update({ numberOfDocs: FieldValue.increment(-1) });
-      
-  }
+    }
 });
 
 exports.SellOrdersWriteListener = 
   functions.firestore.document('SellOrders/{documentUid}')
   .onWrite(async (change, context) => {
-
-  if (!change.before.exists) {
-    // New document Created : add one to count
-
-    db.doc('Properties/SellOrders').update({ numberOfDocs: FieldValue.increment(1) });
-    await transactions.sellOrderTransaction(change);
-
-  } else if (change.before.exists && change.after.exists) {
-    // Updating existing document : Do nothing
-    await transactions.sellOrderTransaction(change);
-
-  } else if (!change.after.exists) {
-    // Deleting document : subtract one from count
-    db.doc('Properties/SellOrders').update({ numberOfDocs: FieldValue.increment(-1) });
-
-  }
-
-  return;
+    if (!change.before.exists) {
+      db.doc('Properties/SellOrders').update({ numberOfDocs: FieldValue.increment(1) });
+      db.collection('Properties').doc(change.after.data().userId).update({ sellOrders: FieldValue.increment(1) });
+      await transactions.sellOrderTransaction(change);
+    } else if (change.before.exists && change.after.exists) {
+      await transactions.sellOrderTransaction(change);
+    } else if (!change.after.exists) {
+      db.collection('Properties').doc(change.after.data().userId).update({ sellOrders: FieldValue.increment(1) });
+      db.doc('Properties/SellOrders').update({ numberOfDocs: FieldValue.increment(-1) });
+    }
 });
 
 exports.TransactionsWriteListener = 
   functions.firestore.document('Transactions/{documentUid}')
     .onWrite(async (change, context) => {
-
       if (!change.before.exists) {
-        // New document Created : add one to count
         const buyerId = change.after.data().buyerId;
         const sellerId = change.after.data().sellerId;
         db.doc(`Properties/${buyerId}`).update({ buyTransactions: FieldValue.increment(1) });
         db.doc(`Properties/${sellerId}`).update({ sellTransactions: FieldValue.increment(1) });
       }
-      return;
     }
 );
 
