@@ -109,22 +109,22 @@ exports.getTransactions = async (req, res, next) => {
     const totalTransaction = parseInt(rawSellTransactions) + parseInt(rawBuyTransactions);
     buyTransactions = rawBuyTransactions;
     sellTransactions = rawSellTransactions;
-    pages = Math.trunc(totalTransaction / amount);
+    pages = Math.ceil(totalTransaction / amount);
     return;
   })
   .catch((error) => {
     console.log("Error getting documents: ", error);
   });
-  const limit = Math.trunc(amount / 2);
+  const limit = Math.ceil(amount / 2);
   let buyLimit = buyTransactions - (page * limit);
   let sellLimit = sellTransactions - (page * limit) ;
-  let buyList = buyLimit > 0;
-  let sellList = sellLimit > 0;
+  let buyList = buyLimit >= 0;
+  let sellList = sellLimit >= 0;
   if (buyLimit < limit) {
-    sellLimit += (buyLimit - limit)
+    sellLimit += (limit -buyLimit)
   }
   if (sellLimit < limit) {
-    buyLimit += (sellLimit - limit)
+    buyLimit += (limit - sellLimit)
   }
   if ( buyList ) {
     await admin.firestore().collection('Transactions')
@@ -222,7 +222,7 @@ exports.buyers = async (req, res, next) => {
   .doc('BuyOrders')
   .get()
   .then((querySnapshot) => {
-    pages = Math.trunc(querySnapshot.data().numberOfDocs / amount);
+    pages = Math.ceil(querySnapshot.data().numberOfDocs / amount);
     return;
   })
   .catch((error) => {
@@ -257,7 +257,7 @@ exports.sellers = async (req, res, next) => {
   .doc('BuyOrders')
   .get()
   .then((querySnapshot) => {
-    pages = Math.trunc(querySnapshot.data().numberOfDocs / amount);
+    pages = Math.ceil(querySnapshot.data().numberOfDocs / amount);
     return;
   })
   .catch((error) => {
@@ -295,7 +295,7 @@ exports.purchases = async (req, res, next) => {
   .get()
   .then((querySnapshot) => {
     const { buyOrders } = querySnapshot.data();
-    pages = Math.trunc(buyOrders / amount);
+    pages = Math.ceil(buyOrders / amount);
     return;
   });
   res.status(200).json({ pages, purchases });
@@ -329,7 +329,7 @@ exports.sells = async (req, res, next) => {
   .get()
   .then((querySnapshot) => {
     const { sellOrders } = querySnapshot.data();
-    pages = Math.trunc(sellOrders / amount);
+    pages = Math.ceil(sellOrders / amount);
     return;
   });
   res.status(200).json({ pages, sells });
