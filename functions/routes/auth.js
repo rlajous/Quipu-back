@@ -1,5 +1,5 @@
 const express = require('express');
-const { body } = require('express-validator/check');
+const { body, query } = require('express-validator/check');
 const admin = require('firebase-admin');
 
 const authController = require('../controllers/auth');
@@ -26,29 +26,96 @@ router.put(
       .normalizeEmail(),
     body('password')
       .trim()
-      .isLength({ min: 5 })
+      .isLength({ min: 8 })
   ],
   authController.signup
 );
 
-router.post('/login', authController.login);
+router.post('/login',  [
+  body('email')
+    .isEmail()
+    .withMessage('Please enter a valid email.')
+    .normalizeEmail(),
+  body('password')
+    .trim()
+    .isLength({ min: 8 })
+], authController.login);
 
 router.get('/user', isAuth, authController.getUser);
 
-router.get('/transactions', isAuth, authController.getTransactions);
+router.get('/transactions', [
+  query('page')
+    .isInt()
+    .withMessage('Please enter a valid page number.'),
+  query('amount')
+    .isInt()
+    .withMessage('Please enter a valid amount number.')
+],isAuth, authController.getTransactions);
 
-router.post('/editUser', isAuth, authController.editUser);
+router.post('/editUser', [
+  body('email')
+    .isEmail()
+    .withMessage('Please enter a valid email.')
+    .normalizeEmail(),
+  body('password')
+    .trim()
+    .isLength({ min: 8 })
+], isAuth, authController.editUser);
 
-router.post('/sellTokens', isAuth, authController.sellTokens);
+router.post('/sellTokens', [
+  body('tokens')
+    .toInt()
+    .isInt({ min: 1 })
+    .withMessage('Please enter a valid token number.'),
+  body('price')
+    .toFloat()
+    .isFloat({ min: 0.01 })
+    .withMessage('Please enter a valid price number.')
+], isAuth, authController.sellTokens);
 
-router.post('/buyTokens', isAuth, authController.buyTokens);
+router.post('/buyTokens', [
+  body('tokens')
+    .isInt({ min: 1 })
+    .withMessage('Please enter a valid token number.'),
+  body('price')
+    .isFloat({ min: 0.01 })
+    .withMessage('Please enter a valid price number.')
+], isAuth, authController.buyTokens);
 
-router.get('/sellers', isAuth, authController.sellers);
+router.get('/sellers', [
+  query('page')
+    .isInt()
+    .withMessage('Please enter a valid page number.'),
+  query('amount')
+    .isInt()
+    .withMessage('Please enter a valid amount number.')
+], isAuth, authController.sellers);
 
-router.get('/buyers', isAuth, authController.buyers);
+router.get('/buyers', [
+  query('page')
+    .isInt()
+    .withMessage('Please enter a valid page number.'),
+  query('amount')
+    .isInt()
+    .withMessage('Please enter a valid amount number.')
+], isAuth, authController.buyers);
 
-router.get('/purchases', isAuth, authController.purchases);
+router.get('/purchases', [
+  query('page')
+    .isInt()
+    .withMessage('Please enter a valid page number.'),
+  query('amount')
+    .isInt()
+    .withMessage('Please enter a valid amount number.')
+], isAuth, authController.purchases);
 
-router.get('/sells', isAuth, authController.sells);
+router.get('/sells', [
+  query('page')
+    .isInt()
+    .withMessage('Please enter a valid page number.'),
+  query('amount')
+    .isInt()
+    .withMessage('Please enter a valid amount number.')
+], isAuth, authController.sells);
 
 module.exports = router;

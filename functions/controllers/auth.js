@@ -2,45 +2,24 @@ const { validationResult } = require('express-validator/check');
 const bcrypt = require('bcryptjs');
 const admin = require('firebase-admin');
 
-exports.signup = (req, res, next) => {
+exports.signup = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     const error = new Error('Validation failed.');
     error.statusCode = 422;
     error.data = errors.array();
-    throw error;
+    return next(error);
   }
   const email = req.body.email;
   const password = req.body.password;
   let uid;
-  bcrypt
-    .hash(password, 12)
-    .then(async hashedPw => {
-      // eslint-disable-next-line promise/no-nesting
-      return await admin.auth().createUser(
-      {
-        email, 
-        password,
-        tokens: 100
-      }
-      ).then(async resp => {
-        uid = resp.uid;
-        await admin.firestore().collection('Properties')
-          .doc(uid)
-          .set({
-            sellTransactions: 0,
-            buyTransactions: 0,
-            buyOrders: 0,
-            sellOrders: 0
-          });
-        return admin.firestore().collection('Users').doc(uid).set({
-          email,
-          tokens: 100
-        });
-      });
-    })
-    .then(() => {
-      return res.status(201).json({ message: 'User created!'});
+  await admin.auth().createUser({
+      email, 
+      password,
+      tokens: 100
+    }).then(async resp => {
+      uid = resp.uid;
+      return;
     })
     .catch(err => {
       if (!err.statusCode) {
@@ -48,6 +27,20 @@ exports.signup = (req, res, next) => {
       }
       next(err);
     });
+    await admin.firestore().collection('Properties')
+    .doc(uid)
+    .set({
+      sellTransactions: 0,
+      buyTransactions: 0,
+      buyOrders: 0,
+      sellOrders: 0
+    });
+    await admin.firestore().collection('Users').doc(uid).set({
+      email,
+      tokens: 100
+    }).then(() => {
+      return res.status(201).json({ message: 'User created!'});
+    })
 };
 
 exports.login = async (req, res, next) => {
@@ -93,6 +86,13 @@ exports.editUser = async (req, res, next) => {
 };
 
 exports.getTransactions = async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const error = new Error('Validation failed.');
+    error.statusCode = 422;
+    error.data = errors.array();
+    return next(error);
+  }
   const { page:rawPage, amount:rawAmount } = req.query;
   const page = parseInt(rawPage);
   const amount = parseInt(rawAmount);
@@ -159,11 +159,17 @@ exports.getTransactions = async (req, res, next) => {
       console.log("Error getting documents: ", error);
     });
   }
-
   res.status(200).json({ pages, transactions });
 };
 
 exports.sellTokens = async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const error = new Error('Validation failed.');
+    error.statusCode = 422;
+    error.data = errors.array();
+    return next(error);
+  }
   const { tokens, price } = req.body;
   await admin.firestore().collection('SellOrders').add({
       userId: req.userId,
@@ -180,6 +186,13 @@ exports.sellTokens = async (req, res, next) => {
 };
 
 exports.buyTokens = async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const error = new Error('Validation failed.');
+    error.statusCode = 422;
+    error.data = errors.array();
+    return next(error);
+  }
   const { tokens, price } = req.body;
   await admin.firestore().collection('BuyOrders').add({
       userId: req.userId,
@@ -196,6 +209,13 @@ exports.buyTokens = async (req, res, next) => {
 };
 
 exports.buyers = async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const error = new Error('Validation failed.');
+    error.statusCode = 422;
+    error.data = errors.array();
+    return next(error);
+  }
   const { page:rawPage, amount:rawAmount } = req.query;
   const page = parseInt(rawPage);
   const amount = parseInt(rawAmount);
@@ -232,6 +252,13 @@ exports.buyers = async (req, res, next) => {
 };
 
 exports.sellers = async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const error = new Error('Validation failed.');
+    error.statusCode = 422;
+    error.data = errors.array();
+    return next(error);
+  }
   const { page:rawPage, amount:rawAmount } = req.query;
   const page = parseInt(rawPage);
   const amount = parseInt(rawAmount);
@@ -267,6 +294,13 @@ exports.sellers = async (req, res, next) => {
 };
 
 exports.purchases = async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const error = new Error('Validation failed.');
+    error.statusCode = 422;
+    error.data = errors.array();
+    return next(error);
+  }
   const { page:rawPage, amount:rawAmount } = req.query;
   const page = parseInt(rawPage);
   const amount = parseInt(rawAmount);
@@ -302,6 +336,13 @@ exports.purchases = async (req, res, next) => {
 };
 
 exports.sells = async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const error = new Error('Validation failed.');
+    error.statusCode = 422;
+    error.data = errors.array();
+    return next(error);
+  }
   const { page:rawPage, amount:rawAmount } = req.query;
   const page = parseInt(rawPage);
   const amount = parseInt(rawAmount);
