@@ -71,14 +71,24 @@ exports.getUser = async (req, res, next) => {
 
 exports.editUser = async (req, res, next) => {
   const email = req.body.email;
+  const password = req.body.password;
+  const uid = req.userId;
+  await admin.auth().updateUser(uid, {
+    email,
+    password
+  })
+    .then(() => {
+      return;
+    })
+    .catch((error) => {
+      console.log('Error updating user:', error);
+    });
   await admin.firestore().collection('Users').doc(req.userId)
     .update({ 
       email
     })
-    .then((doc) => {
-      const data = doc.data();
-      data.uid = req.userId;
-      return res.status(200).json({ data, message: 'User Updated!'});
+    .then(() => {
+      return res.status(200).json({ message: 'User Updated!'});
     })
   .catch((error) => {
     console.log("Error getting documents: ", error);

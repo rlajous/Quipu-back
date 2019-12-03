@@ -13,6 +13,6 @@ module.exports = async (req, res, next) => {
     return next();
   }).catch((error) => {
     error.statusCode = 401;
-    throw error;
+    return next(error);
   });
 };
