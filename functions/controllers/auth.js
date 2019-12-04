@@ -145,7 +145,7 @@ exports.getTransactions = async (req, res, next) => {
     .get()
       .then((querySnapshot) => {
         querySnapshot.forEach((doc) => {
-          transactions.push(doc.data());
+          transactions.push({...doc.data(), id: doc.id});
         });
         return;
       })
@@ -162,7 +162,7 @@ exports.getTransactions = async (req, res, next) => {
     .get()
     .then((querySnapshot) => {
         return querySnapshot.forEach((doc) => {
-          transactions.push(doc.data());
+          transactions.push({...doc.data(), id: doc.id});
         });
       })
     .catch((error) => {
@@ -239,7 +239,7 @@ exports.buyers = async (req, res, next) => {
   .get()
   .then((querySnapshot) => {
     querySnapshot.forEach((doc) => {
-      buyers.push(doc.data());
+      buyers.push({...doc.data(), id: doc.id});
     });
     return;
   })
@@ -282,7 +282,7 @@ exports.sellers = async (req, res, next) => {
   .get()
   .then((querySnapshot) => {
     querySnapshot.forEach((doc) => {
-      sellers.push(doc.data());
+      sellers.push({...doc.data(), id: doc.id});
     });
     return;
   })
@@ -325,7 +325,7 @@ exports.purchases = async (req, res, next) => {
   .get()
   .then((querySnapshot) => {
     querySnapshot.forEach((doc) => {
-      purchases.push(doc.data());
+      purchases.push({...doc.data(), id: doc.id});
     });
     return;
   })
@@ -367,7 +367,7 @@ exports.sells = async (req, res, next) => {
   .get()
   .then((querySnapshot) => {
     querySnapshot.forEach((doc) => {
-      sells.push(doc.data());
+      sells.push({...doc.data(), id: doc.id});
     });
     return;
   })
