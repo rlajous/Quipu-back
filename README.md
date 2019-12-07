@@ -12,4 +12,4 @@ You will need the .env files
 
 To start the server by default (development) run:
 
-`npm run start`
+`npm run serve`
